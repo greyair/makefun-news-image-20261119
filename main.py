@@ -9,12 +9,12 @@ import os
 import shutil
 
 
-def main():
-    here = os.path.dirname(os.path.abspath(__file__))
-    out = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    os.makedirs(out, exist_ok=True)
-    shutil.copyfile(os.path.join(here, "entry.png"), os.path.join(out, "entry.png"))
+def copy_entry():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    os.makedirs(out_dir, exist_ok=True)
+    shutil.copyfile(os.path.join(base_dir, "entry.png"), os.path.join(out_dir, "entry.png"))
 
 
 if __name__ == "__main__":
-    main()
+    copy_entry()
