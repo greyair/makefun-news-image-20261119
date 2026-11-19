@@ -6,6 +6,15 @@
 
 The world in one image — 19 November 2026: the first Trump–Xi–Putin trilateral summit in Shenzhen, Ukraine's third strike on the Crimea Bridge in a week, Iran's attacks on Gulf states after the US hit Qeshm Island, the ICJ ruling on the Rohingya genocide case, unrest in Bangladesh, and Anthropic's record $83 IPO. A deterministic program that writes the front page to /output/entry.png.
 
+## Stories covered
+
+- Shenzhen: the first Trump–Xi–Putin three-way summit
+- Ukraine: the Crimea Bridge hit for a third time in a week
+- Gulf: Iran strikes US bases after the US hit Qeshm Island; a tanker hit in the Strait of Hormuz
+- The Hague: the ICJ rules on the Rohingya genocide case
+- Bangladesh: unrest spreads as Yunus's ancestral home is torched
+- Markets: Anthropic prices a record IPO at $83 a share
+
 ## Run it
 
 ```sh
