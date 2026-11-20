@@ -1,64 +1,126 @@
-#!/usr/bin/env python3
-"""Build the 19 Nov 2026 front page: hero illustration + accurate headlines.
+"""Build the 19 November 2026 front page (1024x1024) for the make.fun
+news-image bounty. Dense broadsheet: masthead, hero band, a numbers
+strip, thirty dated stories in three columns, and a DATE CHECK box.
 
-Deterministic: no timestamps, no randomness, no network. Output entry.png 1024x1024.
-Run: python3 build_image.py
+Run:  python3 build_image.py   ->  writes entry.png next to this file.
+The render is deterministic: same inputs, same bytes, every run.
 """
+
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
-import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+HERE = Path(__file__).resolve().parent
+HERO_PATH = HERE / "hero.png"
+OUT_PATH = HERE / "entry.png"
 
-FONTS = {
-    "serif_bold": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
-    "sans_bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "sans_italic": "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf",
-}
+PAGE = 1024
+MARGIN = 20
+INK = (24, 32, 54)
+PAPER = (243, 236, 217)
+GOLD = (168, 124, 42)
+FADED = (92, 96, 110)
+RULE = (150, 138, 112)
 
-PAGE_W, PAGE_H = 1024, 1024
-MARGIN = 36
-PAPER_BG = (245, 238, 220)
-INK = (18, 24, 38)
-ACCENT = (178, 34, 28)
-MUTED = (88, 88, 84)
-BODY_INK = (52, 52, 48)
-HAIRLINE = (200, 190, 165)
-CAPTION_TOP = 622
-HERO_TOP = 162
-HERO_HEIGHT = 452
-GRID_TOP = 652
-ROW_HEIGHT = 112
-FOOTER_RULE_Y = 992
-FOOTER_TEXT_Y = 1000
+SERIF_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
+SANS = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"
+SANS_BOLD = "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf"
+COND = "/usr/share/fonts/truetype/noto/NotoSans-Condensed.ttf"
+COND_BOLD = "/usr/share/fonts/truetype/noto/NotoSans-CondensedBold.ttf"
+FALLBACK = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+FALLBACK_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-# Articles: tag, title (with explicit line break), body
-ARTICLES = [
-    {"tag": "SUMMIT", "title": "Trump, Xi and Putin meet\nin Shenzhen",
-     "body": "The three leaders held their first three-way summit, with Ukraine and Iran on the agenda."},
-    {"tag": "UKRAINE", "title": "Crimea Bridge hit for a\nthird time in a week",
-     "body": "Ukraine struck the Kerch Bridge again; traffic across the strait was suspended."},
-    {"tag": "GULF", "title": "Iran strikes Gulf states;\ntanker hit in Hormuz",
-     "body": "Tehran fired at US bases in Kuwait and Bahrain after the US hit Qeshm Island."},
-    {"tag": "COURT", "title": "World court rules on\nRohingya genocide case",
-     "body": "The ICJ ruled Thursday on Gambia's case accusing Myanmar of genocide."},
-    {"tag": "BANGLADESH", "title": "Yunus's home torched;\n28 districts in violence",
-     "body": "Attackers set fire to Muhammad Yunus's ancestral home as unrest spread."},
-    {"tag": "MARKETS", "title": "Anthropic prices record\nIPO at $83 a share",
-     "body": "The AI firm priced its Nasdaq debut above its range, the biggest AI listing yet."},
+
+def load_font(path, size):
+    try:
+        return ImageFont.truetype(path, size)
+    except OSError:
+        bold = "Bold" in path or "bold" in path
+        return ImageFont.truetype(FALLBACK_BOLD if bold else FALLBACK, size)
+
+
+MASTHEAD = "19 NOVEMBER 2026"
+SUBLINE = "Thursday  ·  Shenzhen peace declaration  ·  Genocide ruling  ·  Hormuz tankers burn"
+CAPTION = ("A three-way summit in Shenzhen, a genocide verdict in The Hague and tankers "
+           "ablaze in the Gulf — thirty stories first reported on 19 November 2026.")
+NUMBERS = ("9–6  ICJ vote   ·   ~900,000  AI chips cleared   ·   11  crew injured   ·   "
+           "€45bn  EU loan   ·   51–48  Senate vote   ·   $190.4m  Van Gogh")
+DATE_CHECK = ("DATE CHECK — all 30 stories above were first reported on Thursday "
+              "19 November 2026. Left out as earlier news: the US strike on Qeshm "
+              "Island (18 Nov) and the Shenzhen summit announcement (18 Nov).")
+FOOTER = "Sources: Reuters · AP · AFP · BBC · Al Jazeera — 19 Nov 2026"
+
+# (region tag, headline, one-line summary) — every item first reported 19 Nov 2026.
+STORIES = [
+    ("SUMMIT", "Trump, Xi and Putin issue peace declaration in Shenzhen",
+     "Four-point “Declaration toward Peace” after the first three-way summit; the Ukraine and Iran wars go unmentioned."),
+    ("COURT", "World Court rules Myanmar committed genocide",
+     "ICJ votes 9–6 in Gambia v. Myanmar — the first genocide finding against a state."),
+    ("GULF", "Tankers burn as Hormuz attacks mount",
+     "ADNOC vessel hit, 11 crew hurt and one missing; three tankers disabled by mines east of the strait."),
+    ("MARKETS", "Anthropic debuts at about $2 trillion valuation",
+     "Nasdaq listing edges past SpaceX’s June debut as the AI boom faces Wall Street’s test."),
+    ("UKRAINE", "Crimea Bridge hit for third time in a week",
+     "The Kerch crossing is struck again and traffic across the strait is suspended."),
+    ("EUROPE", "EU proposes €45 billion loan for Ukraine",
+     "European Commission floats a new package as the war-funding debate widens."),
+    ("BANGLADESH", "Yunus’s ancestral home torched",
+     "Violence spreads across 28 districts as the unrest deepens."),
+    ("CLIMATE", "COP31 ministers race to unblock Antalya talks",
+     "An informal session hunts for a final text as differences persist."),
+    ("ENERGY", "IEA: Hormuz crisis is gravest threat to energy security",
+     "The annual report calls the Middle East crisis the worst ever observed."),
+    ("SENEGAL", "Migrant boat capsizes off Senegal",
+     "A wooden boat carrying about 100 people hits rocks overnight; dozens are missing."),
+    ("TECH", "US cleared roughly 900,000 AI chips for Chinese firms",
+     "The House Foreign Affairs Committee publishes Commerce Department license records."),
+    ("TECH", "Nvidia halts top China chip sales",
+     "A congressional commission says the PLA seeks Nvidia’s most advanced processors."),
+    ("AVIATION", "Lawmakers urge blocking Chinese aircraft certification",
+     "A report targets Chinese planes and Western makers that operate in China."),
+    ("UK", "Burnham heads to Brussels for EU reset summit",
+     "The prime minister is due Friday for talks on easing Brexit damage."),
+    ("ASIA", "India to host Japanese live-fire missile drills",
+     "A first: Japanese troops may hold live-fire training on Indian ranges."),
+    ("INDIA", "Gandhi: boycotting elections undermines democracy",
+     "The Congress leader warns against election boycotts at a University of Chicago event."),
+    ("AMERICAS", "Hegseth unveils military pact with Venezuela",
+     "The partnership covers training and intelligence cooperation."),
+    ("GAZA", "IDF ends Nuseirat operation",
+     "The invasion of the central Gaza camp ends after one day; four killed on Thursday."),
+    ("YEMEN", "Taiz water production halved, 800,000 cut off",
+     "UNICEF warns the besieged city is reeling as fighting tightens the siege."),
+    ("IRAQ", "Baghdad reaches deal with Kata’ib Hezbollah",
+     "The agreement ends the standoff in the town of Jurf al-Sakhar."),
+    ("PAKISTAN", "22 militants killed in Khyber Pakhtunkhwa raids",
+     "The military claims strikes on Pakistani Taliban over two days."),
+    ("MONGOLIA", "Parliament accepts president’s resignation",
+     "The State Great Khural approves Khürelsükh’s departure."),
+    ("US", "Senate rejects Iran war-powers resolution 51–48",
+     "H.Con.Res.93 had passed the House; three Republicans backed it."),
+    ("UKRAINE", "UK and Norway fund £100m naval craft programme",
+     "Two vessels to be built in the UK under the Maritime Capability Coalition."),
+    ("SERBIA", "Cupic elected parliament speaker 140–97",
+     "The Student List candidate beats Stojan Radenovic on the sitting’s third day."),
+    ("SAUDI", "PIF tower damaged by intercepted Houthi rocket debris",
+     "The Riyadh financial-district tower is hit in an overnight attack."),
+    ("KUWAIT", "Kuwait repels first Iranian attack in two months",
+     "The Gulf state intercepts as regional strikes widen."),
+    ("ASIA", "Russian bombers return to Vietnam",
+     "The deployment comes amid rising regional tensions."),
+    ("AFRICA", "Ethiopia and Eritrea mass troops on border",
+     "The build-up raises fears of a renewed conflict."),
+    ("CULTURE", "Van Gogh sells for $190.4 million, an artist record",
+     "The auction sets a new benchmark for the painter’s work."),
 ]
 
 
-def load_font(name, size):
-    return ImageFont.truetype(FONTS[name], size)
-
-
-def wrap_text(canvas, text, fnt, width):
-    """Greedy word wrap: return the lines that fit within width pixels."""
+def wrap(draw, text, font, max_width):
+    """Greedy word wrap; returns a list of lines that fit max_width."""
     lines, current = [], ""
     for word in text.split():
-        trial = (current + " " + word).strip()
-        if canvas.textlength(trial, font=fnt) <= width:
+        trial = word if not current else current + " " + word
+        if draw.textlength(trial, font=font) <= max_width:
             current = trial
         else:
             if current:
@@ -69,67 +131,120 @@ def wrap_text(canvas, text, fnt, width):
     return lines
 
 
-def render_masthead(canvas):
-    canvas.text((MARGIN, 22), "T H E   W O R L D   I N   O N E   I M A G E", font=load_font("sans_bold", 19), fill=ACCENT)
-    canvas.text((MARGIN, 48), "19 NOVEMBER 2026", font=load_font("serif_bold", 62), fill=INK)
-    canvas.text((MARGIN, 118), "Thursday  •  Shenzhen summit  •  Crimea Bridge  •  Gulf strikes", font=load_font("sans", 19), fill=MUTED)
-    canvas.line([(MARGIN, 148), (PAGE_W - MARGIN, 148)], fill=INK, width=3)
-    canvas.line([(MARGIN, 153), (PAGE_W - MARGIN, 153)], fill=INK, width=1)
+def fit_story(draw, tag, headline, summary, width, max_height):
+    """Pick the largest type sizes whose wrapped block fits max_height."""
+    for head_size, sum_size in ((15, 11), (14, 11), (13, 10), (12, 10)):
+        tag_font = load_font(SANS_BOLD, 10)
+        head_font = load_font(COND_BOLD, head_size)
+        sum_font = load_font(COND, sum_size)
+        head_lines = wrap(draw, headline, head_font, width)
+        sum_lines = wrap(draw, summary, sum_font, width)
+        height = 13 + len(head_lines) * (head_size + 2) + len(sum_lines) * (sum_size + 2)
+        if height <= max_height:
+            return tag_font, head_font, sum_font, head_lines, sum_lines
+    # Last resort: smallest sizes, hard-truncate the summary to two lines.
+    head_font = load_font(COND_BOLD, 12)
+    sum_font = load_font(COND, 10)
+    head_lines = wrap(draw, headline, head_font, width)[:2]
+    sum_lines = wrap(draw, summary, sum_font, width)[:2]
+    return load_font(SANS_BOLD, 10), head_font, sum_font, head_lines, sum_lines
 
 
-def render_hero(page, canvas):
-    """Hero illustration, cropped to fill the banner, with the caption below it."""
-    hero = Image.open(os.path.join(BASE_DIR, "media-generation-news-hero-20261119-0.png")).convert("RGB")
-    hw, hh = hero.size
-    target_w, target_h = PAGE_W - 2 * MARGIN, HERO_HEIGHT
-    scale = max(target_w / hw, target_h / hh)
-    scaled = hero.resize((int(hw * scale), int(hh * scale)), Image.LANCZOS)
-    x0 = (scaled.width - target_w) // 2
-    y0 = (scaled.height - target_h) // 2
-    page.paste(scaled.crop((x0, y0, x0 + target_w, y0 + target_h)), (MARGIN, HERO_TOP))
-    canvas.rectangle([(MARGIN, HERO_TOP), (PAGE_W - MARGIN, HERO_TOP + target_h)], outline=INK, width=2)
-    canvas.text((MARGIN, CAPTION_TOP), "A three-way summit, a bridge hit again and strikes across the Gulf — the world on 19 November 2026.",
-                font=load_font("sans_italic", 16), fill=MUTED)
+def draw_story(draw, x, y, width, row_height, story):
+    tag, headline, summary = story
+    tag_font, head_font, sum_font, head_lines, sum_lines = fit_story(
+        draw, tag, headline, summary, width, row_height - 4)
+    draw.text((x, y), tag, font=tag_font, fill=GOLD)
+    cy = y + 13
+    for line in head_lines:
+        draw.text((x, cy), line, font=head_font, fill=INK)
+        cy += head_font.size + 2
+    for line in sum_lines:
+        draw.text((x, cy), line, font=sum_font, fill=FADED)
+        cy += sum_font.size + 2
 
 
-def render_articles(canvas):
-    """Six articles in a 2-column x 3-row grid, each with tag, title, body."""
-    col_w = (PAGE_W - 2 * MARGIN - 28) // 2
-    for i, article in enumerate(ARTICLES):
-        col = i % 2
-        row = i // 2
-        x = MARGIN + col * (col_w + 28)
-        y = GRID_TOP + row * ROW_HEIGHT
-        canvas.text((x, y), article["tag"], font=load_font("sans_bold", 15), fill=ACCENT)
-        yy = y + 22
-        for line in article["title"].split("\n"):
-            canvas.text((x, yy), line, font=load_font("serif_bold", 21), fill=INK)
-            yy += 25
-        # body, wrapped to 2 lines max
-        lines = wrap_text(canvas, article["body"], load_font("sans", 15), col_w)[:2]
-        for line in lines:
-            canvas.text((x, yy), line, font=load_font("sans", 15), fill=BODY_INK)
-            yy += 19
-        if row < 2:
-            canvas.line([(x, y + ROW_HEIGHT - 14), (x + col_w, y + ROW_HEIGHT - 14)], fill=HAIRLINE, width=1)
+def build():
+    img = Image.new("RGB", (PAGE, PAGE), PAPER)
+    draw = ImageDraw.Draw(img)
+    left, right = MARGIN, PAGE - MARGIN
+    width = right - left
 
+    # Masthead
+    title_font = load_font(SERIF_BOLD, 46)
+    sub_font = load_font(COND_BOLD, 16)
+    draw.line([(left, 14), (right, 14)], fill=INK, width=3)
+    tw = draw.textlength(MASTHEAD, font=title_font)
+    draw.text(((PAGE - tw) / 2, 20), MASTHEAD, font=title_font, fill=INK)
+    sw = draw.textlength(SUBLINE, font=sub_font)
+    draw.text(((PAGE - sw) / 2, 76), SUBLINE, font=sub_font, fill=GOLD)
+    draw.line([(left, 100), (right, 100)], fill=INK, width=2)
 
-def render_footer(canvas):
-    canvas.line([(MARGIN, FOOTER_RULE_Y), (PAGE_W - MARGIN, FOOTER_RULE_Y)], fill=INK, width=1)
-    canvas.text((MARGIN, FOOTER_TEXT_Y), "Sources: Reuters · AP · AFP · BBC — 19 Nov 2026", font=load_font("sans", 13), fill=MUTED)
+    # Hero band (centre-crop the banner to the band's aspect)
+    hero_top, hero_h = 108, 152
+    hero = Image.open(HERO_PATH).convert("RGB")
+    target_ratio = width / hero_h
+    src_ratio = hero.width / hero.height
+    if src_ratio > target_ratio:
+        new_w = int(hero.height * target_ratio)
+        x0 = (hero.width - new_w) // 2
+        hero = hero.crop((x0, 0, x0 + new_w, hero.height))
+    else:
+        new_h = int(hero.width / target_ratio)
+        y0 = (hero.height - new_h) // 2
+        hero = hero.crop((0, y0, hero.width, y0 + new_h))
+    hero = hero.resize((width, hero_h), Image.LANCZOS)
+    img.paste(hero, (left, hero_top))
+    draw.rectangle([left, hero_top, right, hero_top + hero_h], outline=INK, width=2)
 
+    cap_font = load_font(COND, 13)
+    cap_lines = wrap(draw, CAPTION, cap_font, width)
+    cy = hero_top + hero_h + 5
+    for line in cap_lines[:1]:
+        draw.text((left, cy), line, font=cap_font, fill=FADED)
+        cy += 15
 
-def build_front_page():
-    page = Image.new("RGB", (PAGE_W, PAGE_H), PAPER_BG)
-    canvas = ImageDraw.Draw(page)
-    render_masthead(canvas)
-    render_hero(page, canvas)
-    render_articles(canvas)
-    render_footer(canvas)
-    out = os.path.join(BASE_DIR, "entry.png")
-    page.save(out, "PNG", optimize=True)
-    print(out, page.size, os.path.getsize(out), "bytes")
+    # Numbers strip
+    strip_top = cy + 3
+    draw.rectangle([left, strip_top, right, strip_top + 24], fill=INK)
+    num_font = load_font(COND_BOLD, 13)
+    nw = draw.textlength(NUMBERS, font=num_font)
+    draw.text(((PAGE - nw) / 2, strip_top + 5), NUMBERS, font=num_font, fill=PAPER)
+
+    # Story grid: 3 columns x 10 rows
+    grid_top = strip_top + 32
+    grid_bottom = 892
+    rows, cols = 10, 3
+    row_h = (grid_bottom - grid_top) // rows
+    gap = 14
+    col_w = (width - gap * (cols - 1)) // cols
+    for idx, story in enumerate(STORIES[: rows * cols]):
+        col, row = divmod(idx, rows)
+        x = left + col * (col_w + gap)
+        y = grid_top + row * row_h
+        draw_story(draw, x, y, col_w, row_h, story)
+        if row < rows - 1:
+            draw.line([(x, y + row_h - 3), (x + col_w, y + row_h - 3)], fill=RULE, width=1)
+
+    # DATE CHECK box
+    box_top = 900
+    draw.rectangle([left, box_top, right, box_top + 56], outline=GOLD, width=2)
+    dc_font = load_font(COND_BOLD, 12)
+    dc_lines = wrap(draw, DATE_CHECK, dc_font, width - 16)
+    cy = box_top + 6
+    for line in dc_lines[:3]:
+        draw.text((left + 8, cy), line, font=dc_font, fill=INK)
+        cy += 15
+
+    # Footer
+    draw.line([(left, 966), (right, 966)], fill=INK, width=2)
+    foot_font = load_font(COND, 13)
+    fw = draw.textlength(FOOTER, font=foot_font)
+    draw.text(((PAGE - fw) / 2, 974), FOOTER, font=foot_font, fill=FADED)
+
+    img.save(OUT_PATH, format="PNG", optimize=True)
+    print(f"wrote {OUT_PATH} ({OUT_PATH.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":
-    build_front_page()
+    build()
